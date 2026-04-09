@@ -1,6 +1,6 @@
-# demo_word_count.py Walkthrough (Week 2)
+# Python Script Walkthrough (Week 2)
 
-This document explains `demo_word_count.py` section by section so an instructor can quickly understand the data-processing logic.
+This document explains `demo_word_count.py` section by section and also notes the companion script `app_review_word_count.py`.
 
 ## 1) File Header and Script Intent
 
@@ -110,3 +110,9 @@ print(f"  Average         : {sum(word_counts) / len(word_counts):.1f} words")
 
 - In `Week 2/`, run: `python3 demo_word_count.py`
 - Expected result: table-style row output followed by a summary section.
+
+## Additional Script: app_review_word_count.py
+
+- **Purpose:** provides a standalone example with 50 made-up app reviews, per-review word counts, and summary statistics.
+- **Why included:** demonstrates the same analysis pattern on synthetic review data for assignment extension/practice.
+- **Run:** `python3 app_review_word_count.py`
