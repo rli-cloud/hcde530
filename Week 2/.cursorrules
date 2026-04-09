@@ -1,0 +1,45 @@
+# HCDE 530 Project Rules
+
+This repo is for course assignments with small Python scripts, CSV files, and simple HTML pages.
+
+## Directory Structure
+Keep this section current as the project changes.
+
+```text
+Week 2/
+├── .cursorrules
+├── dashboard.html
+├── demo_responses.csv
+└── demo_word_count.py
+```
+
+## Coding Style
+- Prefer clear, beginner-friendly code over clever one-liners.
+- Keep functions small and give variables descriptive names.
+- Add short comments only where logic is not obvious.
+- Preserve existing file and naming conventions unless asked to refactor.
+
+## Python Files
+- Follow PEP 8 basics (spacing, naming, readable line lengths).
+- Use simple, explicit data processing steps.
+- Add basic error handling for file operations when practical.
+- Print outputs in a readable format for class demos.
+
+## CSV/Data Handling
+- Do not modify source CSV data unless explicitly requested.
+- Treat headers as authoritative and avoid hard-coding assumptions beyond known columns.
+- When showing summaries, include counts/averages and label metrics clearly.
+
+## HTML Dashboards
+- Keep dashboards self-contained and easy to run locally.
+- Favor vanilla HTML/CSS/JS unless a library is explicitly requested.
+- Include clear instructions for local serving when browser file restrictions may apply.
+
+## Git Workflow
+- Make small, focused commits with clear messages.
+- Do not commit secrets, credentials, or environment files.
+- Confirm branch status before push and explain push/pull steps clearly when asked.
+
+## Rule Maintenance
+- When files/folders are added, renamed, moved, or removed, update the `Directory Structure` section in this file in the same change.
+- Keep the structure concise and focused on important project files.
