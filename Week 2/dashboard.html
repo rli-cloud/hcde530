@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 2 CSV Dashboard</title>
+  <style>
+    :root {
+      --bg: #f7f9fc;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --accent-soft: #dbeafe;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.7rem;
+    }
+    .sub {
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .row {
+      display: grid;
+      gap: 16px;
+    }
+    .kpis {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      margin-bottom: 16px;
+    }
+    .grid-two {
+      grid-template-columns: 1fr 1fr;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 900px) {
+      .grid-two { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 1.05rem;
+    }
+    .kpi-label {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .kpi-value {
+      margin-top: 6px;
+      font-size: 1.7rem;
+      font-weight: 700;
+    }
+    .bars {
+      display: grid;
+      gap: 10px;
+    }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 150px 1fr 50px;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+    }
+    .bar-track {
+      height: 14px;
+      background: #eef2ff;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 999px;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chip {
+      border: 1px solid var(--accent-soft);
+      background: #eff6ff;
+      color: #1e3a8a;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    input[type="text"] {
+      padding: 9px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      min-width: 260px;
+      font-size: 0.95rem;
+    }
+    .status {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+    th, td {
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 8px;
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; }
+    .small-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .error {
+      margin-top: 12px;
+      color: #991b1b;
+      background: #fee2e2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Week 2 Response Dashboard</h1>
+    <div class="sub">Dashboard generated from <code>demo_responses.csv</code></div>
+
+    <div class="row kpis">
+      <div class="card">
+        <div class="kpi-label">Total Responses</div>
+        <div class="kpi-value" id="kpiResponses">0</div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">Unique Roles</div>
+        <div class="kpi-value" id="kpiRoles">0</div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">Avg Words per Response</div>
+        <div class="kpi-value" id="kpiAvgWords">0</div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">Longest Response (words)</div>
+        <div class="kpi-value" id="kpiLongest">0</div>
+      </div>
+    </div>
+
+    <div class="row grid-two">
+      <section class="card">
+        <h2>Responses by Role</h2>
+        <div class="bars" id="roleBars"></div>
+      </section>
+      <section class="card">
+        <h2>Top Keywords</h2>
+        <div class="chips" id="keywordChips"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>Response Table</h2>
+      <div class="controls">
+        <input type="text" id="searchBox" placeholder="Search participant, role, or response text..." />
+        <span class="status" id="tableStatus">0 rows</span>
+      </div>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Participant</th>
+              <th>Role</th>
+              <th>Response</th>
+              <th>Word Count</th>
+            </tr>
+          </thead>
+          <tbody id="responseTableBody"></tbody>
+        </table>
+      </div>
+      <div class="small-note">
+        If opening this file directly in the browser blocks CSV loading, run a local server in this folder:
+        <code>python3 -m http.server 8000</code>, then open <code>http://localhost:8000/dashboard.html</code>.
+      </div>
+      <div id="errorBox" class="error"></div>
+    </section>
+  </div>
+
+  <script>
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let value = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const next = text[i + 1];
+
+        if (ch === '"') {
+          if (inQuotes && next === '"') {
+            value += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (ch === "," && !inQuotes) {
+          row.push(value);
+          value = "";
+        } else if ((ch === "\n" || ch === "\r") && !inQuotes) {
+          if (ch === "\r" && next === "\n") i++;
+          row.push(value);
+          value = "";
+          if (row.some((cell) => cell.trim() !== "")) rows.push(row);
+          row = [];
+        } else {
+          value += ch;
+        }
+      }
+
+      if (value.length || row.length) {
+        row.push(value);
+        if (row.some((cell) => cell.trim() !== "")) rows.push(row);
+      }
+      return rows;
+    }
+
+    function wordCount(text) {
+      return text.trim() ? text.trim().split(/\s+/).length : 0;
+    }
+
+    function computeTopKeywords(items, limit) {
+      const stopwords = new Set([
+        "the","a","an","and","or","but","if","then","than","to","of","in","on","for","with","from","by","as","at",
+        "is","are","was","were","be","been","being","it","its","this","that","these","those","i","we","you","they",
+        "he","she","my","our","your","their","me","us","them","do","does","did","done","have","has","had","not",
+        "no","yes","just","more","most","very","really","always","only","into","out","up","down","about","over",
+        "under","all","some","any","each","every","can","could","should","would","will","wont","dont","im","ive"
+      ]);
+      const counts = {};
+
+      for (const item of items) {
+        const words = item.response
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, " ")
+          .split(/\s+/)
+          .filter(Boolean);
+        for (const w of words) {
+          if (w.length < 4 || stopwords.has(w)) continue;
+          counts[w] = (counts[w] || 0) + 1;
+        }
+      }
+
+      return Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit);
+    }
+
+    function renderDashboard(items) {
+      const totalResponses = items.length;
+      const roles = [...new Set(items.map((d) => d.role))];
+      const wordCounts = items.map((d) => d.wordCount);
+      const avgWords = totalResponses
+        ? Math.round(wordCounts.reduce((a, b) => a + b, 0) / totalResponses)
+        : 0;
+      const longest = wordCounts.length ? Math.max(...wordCounts) : 0;
+
+      document.getElementById("kpiResponses").textContent = String(totalResponses);
+      document.getElementById("kpiRoles").textContent = String(roles.length);
+      document.getElementById("kpiAvgWords").textContent = String(avgWords);
+      document.getElementById("kpiLongest").textContent = String(longest);
+
+      const roleCounts = items.reduce((acc, item) => {
+        acc[item.role] = (acc[item.role] || 0) + 1;
+        return acc;
+      }, {});
+      const sortedRoles = Object.entries(roleCounts).sort((a, b) => b[1] - a[1]);
+      const maxRole = sortedRoles.length ? sortedRoles[0][1] : 1;
+      const roleBars = document.getElementById("roleBars");
+      roleBars.innerHTML = "";
+      for (const [role, count] of sortedRoles) {
+        const width = Math.max(8, Math.round((count / maxRole) * 100));
+        const row = document.createElement("div");
+        row.className = "bar-row";
+        row.innerHTML =
+          "<div>" + role + "</div>" +
+          '<div class="bar-track"><div class="bar-fill" style="width:' + width + '%"></div></div>' +
+          "<div>" + count + "</div>";
+        roleBars.appendChild(row);
+      }
+
+      const keywords = computeTopKeywords(items, 15);
+      const chips = document.getElementById("keywordChips");
+      chips.innerHTML = "";
+      for (const [word, count] of keywords) {
+        const chip = document.createElement("div");
+        chip.className = "chip";
+        chip.textContent = word + " (" + count + ")";
+        chips.appendChild(chip);
+      }
+
+      const tbody = document.getElementById("responseTableBody");
+      const searchBox = document.getElementById("searchBox");
+      const status = document.getElementById("tableStatus");
+
+      function renderTable(filterText) {
+        const q = (filterText || "").toLowerCase().trim();
+        const filtered = items.filter((d) =>
+          (d.participant_id + " " + d.role + " " + d.response).toLowerCase().includes(q)
+        );
+        tbody.innerHTML = "";
+        for (const row of filtered) {
+          const tr = document.createElement("tr");
+          tr.innerHTML =
+            "<td>" + row.participant_id + "</td>" +
+            "<td>" + row.role + "</td>" +
+            "<td>" + row.response + "</td>" +
+            "<td>" + row.wordCount + "</td>";
+          tbody.appendChild(tr);
+        }
+        status.textContent = filtered.length + " of " + items.length + " rows";
+      }
+
+      searchBox.addEventListener("input", (e) => renderTable(e.target.value));
+      renderTable("");
+    }
+
+    async function init() {
+      const errorBox = document.getElementById("errorBox");
+      try {
+        const res = await fetch("demo_responses.csv");
+        if (!res.ok) throw new Error("Could not load demo_responses.csv");
+        const text = await res.text();
+        const rows = parseCSV(text);
+        if (!rows.length) throw new Error("CSV file appears empty.");
+
+        const headers = rows[0].map((h) => h.trim());
+        const dataRows = rows.slice(1);
+        const idxParticipant = headers.indexOf("participant_id");
+        const idxRole = headers.indexOf("role");
+        const idxResponse = headers.indexOf("response");
+        if (idxParticipant < 0 || idxRole < 0 || idxResponse < 0) {
+          throw new Error("CSV headers must include participant_id, role, and response.");
+        }
+
+        const items = dataRows
+          .filter((r) => r.length >= 3)
+          .map((r) => ({
+            participant_id: (r[idxParticipant] || "").trim(),
+            role: (r[idxRole] || "").trim(),
+            response: (r[idxResponse] || "").trim()
+          }))
+          .filter((d) => d.participant_id || d.role || d.response)
+          .map((d) => ({ ...d, wordCount: wordCount(d.response) }));
+
+        renderDashboard(items);
+      } catch (err) {
+        errorBox.style.display = "block";
+        errorBox.textContent = "Error loading CSV: " + err.message;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

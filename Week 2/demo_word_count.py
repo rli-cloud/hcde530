@@ -1,3 +1,15 @@
+# demo_word_count.py
+#
+# This script counts the number of words in each response in the CSV file
+# and prints a summary of the results.
+#
+# Usage:
+# python demo_word_count.py
+#
+# The script will print a summary of the results to the console.
+#
+# The script will also print a summary of the results to the console.
+
 import csv
 
 
@@ -20,7 +32,7 @@ def count_words(response):
     return len(response.split())
 
 
-# Count words in each response and print a row-by-row summary
+# Count words in each response and print a row-by-row summary so that we have readable output 
 print(f"{'ID':<6} {'Role':<22} {'Words':<6} {'Response (first 60 chars)'}")
 print("-" * 75)
 
