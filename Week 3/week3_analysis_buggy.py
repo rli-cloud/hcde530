@@ -1,7 +1,42 @@
 import csv
 
+# Sort any CSV by primary_tool alphabetically and create new .csv file after sorting 
+def sort_by_primary_tool(input_csv: str, output_csv: str) -> None:
+    """Read a CSV, sort rows by primary_tool in alphabetical order, and write to a new CSV.
+    Arguments:
+        primary_tool information in csv file 
+    Returns: 
+        newly sorted .csv file grouped by primary_tool and organized alphabetically
+    """
+
+    # open csv file and read as disctionary
+    with open(input_csv, newline="", encoding="utf-8") as infile:
+        reader = csv.DictReader(infile)
+        fieldnames = reader.fieldnames
+
+        if not fieldnames:
+            raise ValueError("CSV file has no header row.")
+        if "primary_tool" not in fieldnames:
+            raise ValueError("CSV is missing required 'primary_tool' column.")
+
+        rows = list(reader)
+
+# sorts all rows by the "primary_tool" column in alphabetical order 
+    rows.sort(key=lambda row: (row.get("primary_tool") or "").strip().lower())
+
+# writes new .csv file, with survey info sorted based on primary tool
+    with open(output_csv, "w", newline="", encoding="utf-8") as outfile:
+        writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+def write_cleaned_analysis(input_csv: str) -> None:
+    """Sort input CSV by primary_tool and write results to week3_cleaned_analysis.csv."""
+    sort_by_primary_tool(input_csv, "week3_cleaned_analysis.csv")
+
 # Load the survey data from a CSV file
 filename = "week3_survey_messy.csv"
+write_cleaned_analysis(filename)
 rows = []
 
 with open(filename, newline="", encoding="utf-8") as f:
@@ -47,7 +82,7 @@ for i, row in enumerate(rows, start=1):
             "raw_value": row.get("experience_years"),
         })
         continue
-# flags are used to track the presence of invalid data points and to calculate the average years of experience
+# flags
 if valid_experience_count > 0:
     avg_experience = total_experience / valid_experience_count
 else:
