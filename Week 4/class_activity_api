@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+"""
+Fetch review data from the HCDE 530 API and extract category/helpful votes.
+
+This script:
+1. Calls the /reviews endpoint
+2. Collects category and helpful_votes fields
+3. Prints each result
+4. Saves results to CSV
+"""
+
+from __future__ import annotations
+
+import csv
+import json
+from pathlib import Path
+from typing import Dict, List
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import urlopen
+
+BASE_URL = "https://hcde530-week4-api.onrender.com/reviews" #API endpoint used to fetch data
+OUTPUT_CSV = Path(__file__).resolve().parent / "category_helpful_votes.csv" #output file path for CSV file 
+PAGE_SIZE = 100 #the number of records to request per API call per page 
+
+#fetch review data from API, takes limit (how many reviews to request) and offset (how many reviews to skip) as inputs 
+def fetch_reviews(limit: int = PAGE_SIZE, offset: int = 0) -> Dict:
+    """Fetch one page of reviews from the API."""
+    query = urlencode({"limit": limit, "offset": offset})
+    url = f"{BASE_URL}?{query}"
+    with urlopen(url) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def collect_category_helpful_votes() -> List[Dict[str, int | str]]:
+    """Page through all reviews and keep only category/helpful votes."""
+    rows: List[Dict[str, int | str]] = []
+    offset = 0
+
+    while True:
+        data = fetch_reviews(limit=PAGE_SIZE, offset=offset)
+        reviews = data.get("reviews", [])
+        returned = data.get("returned", len(reviews))
+        total = data.get("total", 0)
+
+        for review in reviews:
+            rows.append(
+                {
+                    "category": review.get("category", ""),
+                    "helpful_votes": review.get("helpful_votes", 0),
+                }
+            )
+
+        if offset + returned >= total or returned == 0:
+            break
+
+        offset += returned
+
+    return rows
+
+
+def save_to_csv(rows: List[Dict[str, int | str]], output_path: Path) -> None:
+    """Write category/helpful vote rows to CSV."""
+    with output_path.open("w", newline="", encoding="utf-8") as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=["category", "helpful_votes"])
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def main() -> None:
+    try:
+        rows = collect_category_helpful_votes()
+    except (HTTPError, URLError, TimeoutError) as err:
+        print(f"Request failed: {err}")
+        return
+
+    print("Category | Helpful Votes")
+    print("-" * 28)
+    for row in rows:
+        print(f"{row['category']} | {row['helpful_votes']}")
+
+    save_to_csv(rows, OUTPUT_CSV)
+    print(f"\nSaved {len(rows)} rows to {OUTPUT_CSV.resolve()}")
+
+
+if __name__ == "__main__":
+    main()
