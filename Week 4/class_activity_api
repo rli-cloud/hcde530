@@ -25,7 +25,7 @@ OUTPUT_CSV = Path(__file__).resolve().parent / "category_helpful_votes.csv" #out
 OUTPUT_CSV_WITH_DATES = (
     Path(__file__).resolve().parent / "category_helpful_votes_dates_chronological.csv"
 )
-PAGE_SIZE = 100 #the number of records to request per API call per page 
+PAGE_SIZE = 100 #the number of records to request per API call per page, occurs repeatedly until no data left (or until limit) 
 
 #fetch review data from API, takes limit (how many reviews to request) and offset (how many reviews to skip) as inputs 
 def fetch_reviews(limit: int = PAGE_SIZE, offset: int = 0) -> Dict:
@@ -35,11 +35,11 @@ def fetch_reviews(limit: int = PAGE_SIZE, offset: int = 0) -> Dict:
     with urlopen(url) as response:
         return json.loads(response.read().decode("utf-8"))
 
-
+#function to return data as a list of items, and each item is a dictionary
 def collect_category_helpful_votes() -> List[Dict[str, int | str]]:
     """Page through all reviews and keep category/helpful votes/date."""
     rows: List[Dict[str, int | str]] = []
-    offset = 0
+    offset = 0 #tart pagination at 0 
 
     while True:
         data = fetch_reviews(limit=PAGE_SIZE, offset=offset)
@@ -47,6 +47,7 @@ def collect_category_helpful_votes() -> List[Dict[str, int | str]]:
         returned = data.get("returned", len(reviews))
         total = data.get("total", 0)
 
+        #loop to append rows with the data types that I wanted to fetch 
         for review in reviews:
             rows.append(
                 {
@@ -63,7 +64,7 @@ def collect_category_helpful_votes() -> List[Dict[str, int | str]]:
 
     return rows
 
-
+#function to save returned data points as an organized .csv file 
 def save_to_csv(rows: List[Dict[str, int | str]], output_path: Path) -> None:
     """Write category/helpful vote rows to CSV."""
     with output_path.open("w", newline="", encoding="utf-8") as csv_file:
@@ -77,7 +78,7 @@ def save_to_csv(rows: List[Dict[str, int | str]], output_path: Path) -> None:
                 }
             )
 
-
+#another function to create a new .csv file, but sorts based on chronological order (after date also gets fetched)
 def save_date_sorted_csv(rows: List[Dict[str, int | str]], output_path: Path) -> None:
     """Write date/category/helpful vote rows sorted chronologically."""
     sorted_rows = sorted(rows, key=lambda row: str(row.get("date", "")))
@@ -95,7 +96,7 @@ def save_date_sorted_csv(rows: List[Dict[str, int | str]], output_path: Path) ->
                 }
             )
 
-
+#runs all functions defined above
 def main() -> None:
     try:
         rows = collect_category_helpful_votes()
