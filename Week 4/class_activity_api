@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Fetch review data from the HCDE 530 API and extract category/helpful votes.
+Fetch review data from the HCDE 530 API and extract selected fields.
 
 This script:
 1. Calls the /reviews endpoint
-2. Collects category and helpful_votes fields
+2. Collects category, helpful_votes, and date fields
 3. Prints each result
 4. Saves results to CSV
+5. Saves a date-sorted CSV (oldest to newest)
 """
 
 from __future__ import annotations
@@ -21,6 +22,9 @@ from urllib.request import urlopen
 
 BASE_URL = "https://hcde530-week4-api.onrender.com/reviews" #API endpoint used to fetch data
 OUTPUT_CSV = Path(__file__).resolve().parent / "category_helpful_votes.csv" #output file path for CSV file 
+OUTPUT_CSV_WITH_DATES = (
+    Path(__file__).resolve().parent / "category_helpful_votes_dates_chronological.csv"
+)
 PAGE_SIZE = 100 #the number of records to request per API call per page 
 
 #fetch review data from API, takes limit (how many reviews to request) and offset (how many reviews to skip) as inputs 
@@ -33,7 +37,7 @@ def fetch_reviews(limit: int = PAGE_SIZE, offset: int = 0) -> Dict:
 
 
 def collect_category_helpful_votes() -> List[Dict[str, int | str]]:
-    """Page through all reviews and keep only category/helpful votes."""
+    """Page through all reviews and keep category/helpful votes/date."""
     rows: List[Dict[str, int | str]] = []
     offset = 0
 
@@ -48,6 +52,7 @@ def collect_category_helpful_votes() -> List[Dict[str, int | str]]:
                 {
                     "category": review.get("category", ""),
                     "helpful_votes": review.get("helpful_votes", 0),
+                    "date": review.get("date", ""),
                 }
             )
 
@@ -64,7 +69,31 @@ def save_to_csv(rows: List[Dict[str, int | str]], output_path: Path) -> None:
     with output_path.open("w", newline="", encoding="utf-8") as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=["category", "helpful_votes"])
         writer.writeheader()
-        writer.writerows(rows)
+        for row in rows:
+            writer.writerow(
+                {
+                    "category": row.get("category", ""),
+                    "helpful_votes": row.get("helpful_votes", 0),
+                }
+            )
+
+
+def save_date_sorted_csv(rows: List[Dict[str, int | str]], output_path: Path) -> None:
+    """Write date/category/helpful vote rows sorted chronologically."""
+    sorted_rows = sorted(rows, key=lambda row: str(row.get("date", "")))
+    with output_path.open("w", newline="", encoding="utf-8") as csv_file:
+        writer = csv.DictWriter(
+            csv_file, fieldnames=["date", "category", "helpful_votes"]
+        )
+        writer.writeheader()
+        for row in sorted_rows:
+            writer.writerow(
+                {
+                    "date": row.get("date", ""),
+                    "category": row.get("category", ""),
+                    "helpful_votes": row.get("helpful_votes", 0),
+                }
+            )
 
 
 def main() -> None:
@@ -80,7 +109,9 @@ def main() -> None:
         print(f"{row['category']} | {row['helpful_votes']}")
 
     save_to_csv(rows, OUTPUT_CSV)
+    save_date_sorted_csv(rows, OUTPUT_CSV_WITH_DATES)
     print(f"\nSaved {len(rows)} rows to {OUTPUT_CSV.resolve()}")
+    print(f"Saved date-sorted rows to {OUTPUT_CSV_WITH_DATES.resolve()}")
 
 
 if __name__ == "__main__":
