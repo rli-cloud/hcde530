@@ -1,3 +1,4 @@
+#cursor generated data to use in demo_word_count
 """
 app_review_word_count.py
 
@@ -5,12 +6,12 @@ Creates 50 sample app reviews, counts words in each review,
 and prints shortest, longest, and average review length.
 """
 
-
+#function that counts how many words are in a piece of text 
 def count_words(text):
     """Return the number of words in a string."""
     return len(text.split())
 
-
+#generated comments as strings
 reviews = [
     "The app is clean, fast, and easy to use for daily planning.",
     "I like the reminders but wish recurring tasks were more flexible.",
@@ -64,18 +65,20 @@ reviews = [
     "Simple features done well make this app stand out.",
 ]
 
-
+#prints information about columns (review number, word count/review, and review preview)
 print(f"{'Review #':<8} {'Words':<6} Review Preview")
 print("-" * 75)
 
 word_counts = []
 
+#prints each review one by one and stores in the list word_counts
 for i, review in enumerate(reviews, start=1):
     words = count_words(review)
     word_counts.append(words)
     preview = review if len(review) <= 65 else review[:65] + "..."
     print(f"{i:<8} {words:<6} {preview}")
 
+#printed information in console log by summary, total review, shortest review, longest review, and average word count 
 print()
 print("Summary")
 print("-" * 30)
