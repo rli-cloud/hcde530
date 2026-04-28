@@ -1,3 +1,11 @@
+"""Clean a messy Week 3 survey CSV and write a standardized output file.
+
+This script reads `week3_survey_messy.csv`, validates required columns,
+removes rows with blank `participant_name` values, trims whitespace from
+names, uppercases the `role` field, and writes the cleaned data to
+`responses_cleaned.csv`.
+"""
+
 import csv
 from pathlib import Path #knows how to deal with files that work in the local operating system
 
