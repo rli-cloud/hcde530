@@ -1,29 +1,30 @@
-# Week 3 - C2 Code Literacy and Documentation
+# Week 3 - C3 Data Cleaning and File Handling
 
-## Competency Claim: C2 - Code Literacy and Documentation
+## Competency Claim: C3 - Data Cleaning and File Handling
 
-**What it means:** Reading code well enough to explain what it does, change it when needed, and document it so someone else (or future you) can follow it. This includes inline comments, docstrings, commit messages, and README content.
+**What it means:** Loading messy real-world data with Python, finding what is broken, and fixing it so the script runs cleanly on any valid input. Reading error messages as diagnostic information. Writing scripts that produce consistent, repeatable output.
 
 ## My Response
 
-### 1) Reading and Explaining Code
-- I practiced reading Python scripts line by line and explaining what each block does in plain language.
-- I learned what a docstring is and used it to formalize the comments I was making for myself throughout my code. This way, it's easier for other people to read and understand my functions. 
+### 1) Loading and Cleaning Messy Data
+- In `clean_responses.py`, I load the messy input file (`week3_survey_messy.csv`) with `csv.DictReader` and validate that the expected schema exists before processing.
+- I clean key fields by trimming whitespace in `participant_name` and normalizing `role` values to uppercase for consistent downstream analysis.
+- I skip invalid records (blank names) instead of letting bad rows propagate into analysis files.
 
-### 2) Debugging and Changing Code
-- I identified and fixed path-related file errors (`No such file or directory`) by checking working directory and relative paths.
-- I traced a `ValueError` caused by converting a non-numeric string (`"fifteen"`) with `int(...)`.
-- I updated exception handling with `try/except (ValueError, TypeError)` to prevent crashes and flag invalid data points.
-- I corrected sort behavior to return highest satisfaction scores using descending sort.
+### 2) Finding Breaks and Using Errors Diagnostically
+- I traced a `ValueError` and skipped it so the script could continue running but still made sure to flag it in the console log and include it in the average years of experience. 
+- This wasn't flagged as a console error, but I also corrected sort behavior to return highest satisfaction scores using descending sort.
+- I added explicit checks and meaningful exceptions (`FileNotFoundError`, `ValueError`) so failures are immediate and informative, rather than silent.
 
-### 3) Evidence From This Week
-- Updated analysis code to handle invalid numeric values without failing.
-- Added reusable functions to sort CSV data by columns like `age_range` and `primary_tool`.
-- Generated cleaned output files (for example, `responses_cleaned.csv` and `week3_cleaned_analysis.csv`).
+### 3) File Handling and Repeatable Outputs
+- My scripts use `pathlib.Path` and deterministic read/write steps so they run consistently from valid inputs.
+- I write cleaned and analyzed files with fixed headers and stable transformations, producing repeatable artifacts such as:
+  - `responses_cleaned.csv`
+  - `week3_cleaned_analysis.csv`
+- I kept an intentionally incorrect output (`wrong_week3_cleaned_analysis.csv`) as a comparison artifact to verify that later fixes corrected behavior.
 
 ### 4) Reflection and Learnings
-- I can now read unfamiliar code and explain it in smaller logical pieces.
-- I improved at debugging data-quality issues in CSV workflows.
-- I learned to document code changes so they are easier for others to understand and reuse.
-- I learned how to better stage and commit my code so that commit messages are more applicable to specific files. 
-- I realized that it's still important to be familiar with the data that you're writing the script for. I ran into trouble with an initial script I had written to sort the survey responses based on age group, but didn't realize that the age groupings weren't uniform and several overlapped with each other (ex: 25-44 vs. 24-31). I forgot to commit this iteration before changing it, but will be sure to do it next time. 
+- I got better at treating errors as debugging clues rather than blockers.
+- I learned that when writing scripts, it's important to take a look at the raw data before diving straight into the script. Because there's so many ways someone could respond to a question (ex: strings vs. integers), it's important to know what you're dealing with first so you know what kinds of edge cases to account for in the code. 
+- Human review of code outputs is still important, because sometimes the code will run perfectly but still return something you weren't exactly looking for (ex: correcting sort order). 
+- I also learned that "clean output" is not enough on its own; repeatability matters, so my process now emphasizes deterministic transformations and consistent output files.
