@@ -1,0 +1,320 @@
+#!/usr/bin/env python3
+import argparse
+import csv
+import json
+import os
+from pathlib import Path
+from datetime import datetime, timedelta
+from html import escape
+from urllib.parse import urlencode
+from urllib.error import HTTPError, URLError
+from urllib.request import urlopen
+
+# loads OpenWeather API from .env
+def load_openweather_api_key(env_path: Path) -> str:
+    """Load OPENWEATHER_API_KEY from a .env file without extra dependencies."""
+    env_value = os.getenv("OPENWEATHER_API_KEY", "").strip() #checks if api key is available in this enviornment as variable (precedence over .env)
+    if env_value: #if key variable exists, skips reading .env file to check for a key there 
+        return env_value
+
+    if not env_path.exists(): #checks for .env file 
+        raise FileNotFoundError(f".env file not found at: {env_path}") #if no .env found, flags an error and stops running script
+
+#reads .env file line by line and looks for the line that specifically identifies OPENWEATHER_API_KEY (to actually access the API)
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            # Allow commented key lines like "#OPENWEATHER_API_KEY=..."
+            line = line.lstrip("#").strip() #was having trouble with this cuz i initially had a comment that described the file... took it out though, but this line says that it strips the # in front of comments so the script can read that line
+            if not line:
+                continue
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        if key.strip() == "OPENWEATHER_API_KEY": #here's the line that says it's looking for this specific api key 
+            key_value = value.strip().strip("'\"") #cleans the value so there's no quotations around it 
+            if key_value:
+                return key_value
+
+    raise ValueError("OPENWEATHER_API_KEY not found in .env file.") #error flag if a key isn't found 
+
+#conversion because the raw temperature data from the API comes back in Kelvins, converted to Fahrenheit degrees to make it more readable
+def kelvin_to_fahrenheit(k: float) -> float:
+    return (k - 273.15) * 9.0 / 5.0 + 32.0
+
+#the actual api request URL for OpenWeather 
+def fetch_weather(q: str, api_key: str) -> dict:
+    url = "https://api.openweathermap.org/data/2.5/weather" #the actual endpoint 
+    params = urlencode(
+        {
+            "q": q, #the location query string (changed from the default London to Seattle)
+            "appid": api_key, #the api key that'll return the decoded JSON response 
+        }
+    )
+    request_url = f"{url}?{params}" #combines all parameters listed above into a single full request URL
+
+#calls the OpenWeather URL and either returns the JSON data (as intended) or flags an error if network problems are encountered (great for debugging i had to do earlier)
+    try:
+        with urlopen(request_url, timeout=30) as response: #opens URL built earlier, gives up after 30 seconds 
+            return json.loads(response.read().decode("utf-8")) #parses text into Python dictionary
+    except HTTPError as e: #runs even if HTTP error status is encountered 
+        body = e.read().decode("utf-8", errors="replace") if hasattr(e, "read") else ""
+        raise RuntimeError(
+            f"OpenWeather API request failed with HTTP {e.code}. "
+            f"Response body: {body}"
+        ) from e
+    except URLError as e: #still runs if there's networking problems on a lower-level than HTTP status 
+        raise RuntimeError(f"Network error while calling OpenWeather: {e}") from e
+
+#takes the weather API responses (aka the payload) and writes the selected fields into CSV file (as requested) 
+def write_results_to_csv(payload: dict, output_path: Path) -> None:
+    city = payload.get("name") #city name
+    main = payload.get("main", {}) 
+    clouds = payload.get("clouds", {}) #clouds 
+
+    temp_k = main.get("temp") #temperature in kelvins 
+    feels_like_k = main.get("feels_like") #feel like temperature in kelvins 
+    cloud_coverage = clouds.get("all") #cloud coverage 
+
+#rounds converted values (from Kelvins to Fahrenheit) to the nearest whole number (again, to make these numbers more readable) 
+    temp_f = round(kelvin_to_fahrenheit(temp_k)) if temp_k is not None else None
+    feels_like_f = (
+        round(kelvin_to_fahrenheit(feels_like_k)) if feels_like_k is not None else None
+    )
+
+    # /data/2.5/weather provides:
+    # - dt: Unix time (seconds)
+    # - timezone: offset in seconds from UTC
+    dt_unix = payload.get("dt")
+    tz_offset_seconds = payload.get("timezone")
+
+#turns the API's timestamp info into human-readable local date/time, and a timezone string for the CSV 
+    if dt_unix is not None:
+        #this block is specifically for the timezone, converted ito something readable 
+        base_utc = datetime.utcfromtimestamp(int(dt_unix))
+        if tz_offset_seconds is not None:
+            local_dt = base_utc + timedelta(seconds=int(tz_offset_seconds))
+            total_minutes = int(tz_offset_seconds) // 60
+            sign = "+" if total_minutes >= 0 else "-"
+            total_minutes = abs(total_minutes)
+            tz_hours = total_minutes // 60
+            tz_minutes = total_minutes % 60
+            tz_str = f"UTC{sign}{tz_hours:02d}:{tz_minutes:02d}"
+        else: #if a timezone wasn't detected, leaves the datetime as UTC 
+            local_dt = base_utc
+            tz_str = "UTC"
+    else: #if dt_unix aka the timestamp of the payload is missing, sets these variables to none
+        local_dt = None
+        tz_str = None
+
+#actually writes the returned data as one row in the .csv file 
+    with output_path.open("w", newline="", encoding="utf-8") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow( #labels for each data point so you know what these numbers mean 
+            ["city", "date", "time", "timezone", "temp_f", "feels_like_f", "clouds"]
+        )
+        writer.writerow( #actual returned values in the form of a list 
+            [
+                city,
+                local_dt.strftime("%Y-%m-%d") if local_dt else None,
+                local_dt.strftime("%H:%M:%S") if local_dt else None,
+                tz_str,
+                temp_f,
+                feels_like_f,
+                cloud_coverage,
+            ]
+        )
+
+#visually represents the fetched data requested from the API into a readable and user friendly card (uses html and css) 
+def write_weather_card(
+    *,
+    city: str | None,
+    local_dt: datetime | None,
+    tz_str: str | None,
+    temp_f: float | None,
+    feels_like_f: float | None,
+    cloud_coverage: int | None,
+    card_path: Path,
+    css_path: Path,
+) -> None:
+    """Write a simple HTML/CSS weather card from extracted API fields."""
+
+    city_display = escape(city) if city else "Unknown"
+    date_display = local_dt.strftime("%Y-%m-%d") if local_dt else "N/A"
+    time_display = local_dt.strftime("%H:%M:%S") if local_dt else "N/A"
+    tz_display = tz_str if tz_str else "N/A"
+
+    temp_display = "N/A" if temp_f is None else str(temp_f)
+    feels_like_display = "N/A" if feels_like_f is None else str(feels_like_f)
+    clouds_display = "N/A" if cloud_coverage is None else str(cloud_coverage)
+
+    css_path.write_text( #writes the css file 
+        """
+.page {
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  background: #0b1220;
+  color: #e6eefc;
+  padding: 28px 16px;
+}
+
+.weather-card {
+  max-width: 520px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, rgba(46, 134, 255, 0.18), rgba(99, 102, 241, 0.10));
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  overflow: hidden;
+}
+
+.weather-card__inner {
+  padding: 18px 18px 16px;
+}
+
+.weather-card__top {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.weather-card__city {
+  font-size: 22px;
+  font-weight: 750;
+  margin: 0;
+  letter-spacing: 0.2px;
+}
+
+.weather-card__meta {
+  text-align: right;
+  color: rgba(230, 238, 252, 0.85);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.weather-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.metric {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 12px 12px;
+}
+
+.metric__label {
+  font-size: 12px;
+  color: rgba(230, 238, 252, 0.78);
+  margin-bottom: 6px;
+}
+
+.metric__value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.footer-note {
+  margin-top: 12px;
+  font-size: 12px;
+  color: rgba(230, 238, 252, 0.7);
+}
+
+@media (max-width: 420px) {
+  .weather-grid { grid-template-columns: 1fr; }
+  .weather-card__top { flex-direction: column; align-items: flex-start; }
+  .weather-card__meta { text-align: left; }
+}
+""".lstrip(
+            "\n"
+        ),
+        encoding="utf-8",
+    )
+
+    card_path.write_text( #writes the html file 
+        f"""<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Weather Card - {city_display}</title>
+    <link rel="stylesheet" href="{css_path.name}" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="weather-card" role="region" aria-label="Weather card">
+        <div class="weather-card__inner">
+          <div class="weather-card__top">
+            <h1 class="weather-card__city">{city_display}</h1>
+            <div class="weather-card__meta">
+              <div><strong>Date:</strong> {date_display}</div>
+              <div><strong>Time:</strong> {time_display}</div>
+              <div><strong>Timezone:</strong> {tz_display}</div>
+            </div>
+          </div>
+
+          <div class="weather-grid">
+            <div class="metric">
+              <div class="metric__label">Temperature (F)</div>
+              <div class="metric__value">{temp_display}</div>
+            </div>
+            <div class="metric">
+              <div class="metric__label">Feels Like (F)</div>
+              <div class="metric__value">{feels_like_display}</div>
+            </div>
+            <div class="metric">
+              <div class="metric__label">Clouds (%)</div>
+              <div class="metric__value">{clouds_display}</div>
+            </div>
+          </div>
+
+          <div class="footer-note">
+            Generated from OpenWeather API results.
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+""",
+        encoding="utf-8",
+    )
+
+#actually creates the HTML/CSS weather card files after the csv row is written
+    card_path = output_path.with_name("weather_card.html")
+    css_path = output_path.with_name("weather_card.css")
+    write_weather_card(
+        city=city,
+        local_dt=local_dt,
+        tz_str=tz_str,
+        temp_f=temp_f,
+        feels_like_f=feels_like_f,
+        cloud_coverage=cloud_coverage,
+        card_path=card_path,
+        css_path=css_path,
+    )
+
+#the orchestrator of the functions described above, called in the last line of this file; probably to make the file more readable and modular 
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Call OpenWeather current weather API and export temp/feels_like/clouds to CSV."
+    )
+    parser.add_argument("--q", type=str, default="Seattle,US", help="City,country (example: London,uk)") #location query string 
+    args = parser.parse_args()
+
+    script_dir = Path(__file__).resolve().parent #finds the directory where a4_api_call (this file) lives 
+    env_path = script_dir / ".env" #builds the path to .env so script can access the API key needed to fetch requested data 
+    output_path = script_dir / "api_call_results.csv" #builds the path for the CSV output file in the same folder 
+
+    api_key = load_openweather_api_key(env_path)#loads API key from .env 
+    weather_data = fetch_weather(args.q, api_key) #calls the API for location specified by location query string, returns JSON response 
+    write_results_to_csv(weather_data, output_path) #extracts fields requested and writes them to the new .csv file 
+
+    print(f"Results written to: {output_path}") #print results in a new .csv file 
+
+
+if __name__ == "__main__":
+    main() #runs when the script is executed directly 
