@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Weather Card - Seattle</title>
+    <link rel="stylesheet" href="weather_card.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="weather-card" role="region" aria-label="Weather card">
+        <div class="weather-card__inner">
+          <div class="weather-card__top">
+            <h1 class="weather-card__city">Seattle</h1>
+            <div class="weather-card__meta">
+              <div><strong>Date:</strong> 2026-04-29</div>
+              <div><strong>Time:</strong> 00:52:27</div>
+              <div><strong>Timezone:</strong> UTC-07:00</div>
+            </div>
+          </div>
+
+          <div class="weather-grid">
+            <div class="metric">
+              <div class="metric__label">Temperature (F)</div>
+              <div class="metric__value">50</div>
+            </div>
+            <div class="metric">
+              <div class="metric__label">Feels Like (F)</div>
+              <div class="metric__value">49</div>
+            </div>
+            <div class="metric">
+              <div class="metric__label">Clouds (%)</div>
+              <div class="metric__value">100</div>
+            </div>
+          </div>
+
+          <div class="footer-note">
+            Generated from OpenWeather API results.
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
