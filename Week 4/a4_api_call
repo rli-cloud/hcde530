@@ -125,6 +125,20 @@ def write_results_to_csv(payload: dict, output_path: Path) -> None:
             ]
         )
 
+    #actually creates the HTML/CSS weather card files after the csv row is written
+    card_path = output_path.with_name("weather_card.html")
+    css_path = output_path.with_name("weather_card.css")
+    write_weather_card(
+        city=city,
+        local_dt=local_dt,
+        tz_str=tz_str,
+        temp_f=temp_f,
+        feels_like_f=feels_like_f,
+        cloud_coverage=cloud_coverage,
+        card_path=card_path,
+        css_path=css_path,
+    )
+
 #visually represents the fetched data requested from the API into a readable and user friendly card (uses html and css) 
 def write_weather_card(
     *,
@@ -281,20 +295,6 @@ def write_weather_card(
 </html>
 """,
         encoding="utf-8",
-    )
-
-#actually creates the HTML/CSS weather card files after the csv row is written
-    card_path = output_path.with_name("weather_card.html")
-    css_path = output_path.with_name("weather_card.css")
-    write_weather_card(
-        city=city,
-        local_dt=local_dt,
-        tz_str=tz_str,
-        temp_f=temp_f,
-        feels_like_f=feels_like_f,
-        cloud_coverage=cloud_coverage,
-        card_path=card_path,
-        css_path=css_path,
     )
 
 #the orchestrator of the functions described above, called in the last line of this file; probably to make the file more readable and modular 
