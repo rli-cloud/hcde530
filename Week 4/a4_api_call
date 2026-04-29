@@ -45,7 +45,7 @@ def kelvin_to_fahrenheit(k: float) -> float:
 #the actual api request URL for OpenWeather 
 def fetch_weather(q: str, api_key: str) -> dict:
     url = "https://api.openweathermap.org/data/2.5/weather" #the actual endpoint 
-    params = urlencode(
+    params = urlencode( #parameters required for the API call to work
         {
             "q": q, #the location query string (changed from the default London to Seattle)
             "appid": api_key, #the api key that'll return the decoded JSON response 
@@ -68,13 +68,13 @@ def fetch_weather(q: str, api_key: str) -> dict:
 
 #takes the weather API responses (aka the payload) and writes the selected fields into CSV file (as requested) 
 def write_results_to_csv(payload: dict, output_path: Path) -> None:
-    city = payload.get("name") #city name
+    city = payload.get("name") #city name for better context
     main = payload.get("main", {}) 
-    clouds = payload.get("clouds", {}) #clouds 
+    clouds = payload.get("clouds", {}) #clouds, initially extracted to make sure the script was working
 
-    temp_k = main.get("temp") #temperature in kelvins 
-    feels_like_k = main.get("feels_like") #feel like temperature in kelvins 
-    cloud_coverage = clouds.get("all") #cloud coverage 
+    temp_k = main.get("temp") #temperature in kelvins, initially extracted to make sure the script was working
+    feels_like_k = main.get("feels_like") #feel like temperature in kelvins, initially extracted to make sure the script was working
+    cloud_coverage = clouds.get("all") #cloud coverage, initially extracted to make sure the script was working
 
 #rounds converted values (from Kelvins to Fahrenheit) to the nearest whole number (again, to make these numbers more readable) 
     temp_f = round(kelvin_to_fahrenheit(temp_k)) if temp_k is not None else None
@@ -85,8 +85,8 @@ def write_results_to_csv(payload: dict, output_path: Path) -> None:
     # /data/2.5/weather provides:
     # - dt: Unix time (seconds)
     # - timezone: offset in seconds from UTC
-    dt_unix = payload.get("dt")
-    tz_offset_seconds = payload.get("timezone")
+    dt_unix = payload.get("dt") #timestamp of the payload, for better context (added in later iterations)
+    tz_offset_seconds = payload.get("timezone") #timezone, for better context (added later)
 
 #turns the API's timestamp info into human-readable local date/time, and a timezone string for the CSV 
     if dt_unix is not None:
