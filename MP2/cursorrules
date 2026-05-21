@@ -1,0 +1,131 @@
+# .cursorrules — Moodboard / Portfolio Inspiration Widget (macOS)
+
+## Project Overview
+A macOS menu-bar / floating widget that lets designers save screenshots and screen recordings into named portfolio inspiration folders. The widget lives pinned in the top-right corner above all windows, expands into a rotary-dial folder picker on hover, and returns to its corner with easing after use.
+
+## Tech Stack
+- **Language:** Swift 5.9+
+- **UI Framework:** SwiftUI (primary) + AppKit (where SwiftUI falls short — e.g. NSPanel, window level control)
+- **Minimum Target:** macOS 13 Ventura
+- **Package Manager:** Swift Package Manager (SPM)
+- **No third-party dependencies unless absolutely necessary**
+
+---
+
+## Architecture Rules
+
+### Window & Widget Layer
+- Use `NSPanel` with `NSWindow.Level.floating` (or `.screenSaver` if needed) to keep the widget above all windows at all times
+- The widget must NEVER steal keyboard focus from the user's active app
+- Use `NSWindowController` to manage widget lifecycle
+- The widget should be a borderless, non-activating panel (`NSPanel` with `nonactivatingPanel` style mask)
+
+### App Structure
+- This is a **menu bar app** (LSUIElement = true in Info.plist — no Dock icon)
+- `AppDelegate` manages the NSPanel and menu bar item
+- Use `@NSApplicationDelegateAdaptor` to bridge SwiftUI App lifecycle with AppKit
+- Keep SwiftUI views as the UI layer; use AppKit only for system-level concerns
+
+### State Management
+- Use `@StateObject` / `@ObservableObject` for widget state (expanded, folderDial open, active folder, etc.)
+- Persist folder data using `UserDefaults` for simplicity initially; structure the data layer so it can be swapped to CoreData or SQLite later
+- All folder model objects should conform to `Codable`
+
+---
+
+## Feature-Specific Rules
+
+### Widget States
+The widget has four distinct states — model these as an enum:
+```swift
+enum WidgetState {
+  case resting          // Small circle in corner
+  case hovering         // Quarter-circle dial fans out (top 3 folders)
+  case dialExpanded     // Widget moves to center, full circle of all folders
+  case appOpen          // Full app interface
+}
+```
+
+### Folder Dial UI
+- Default (hovering): show top 3 folders — either the 3 most recently saved-to, or the user's top 3 starred folders (starred takes priority)
+- Overflow: remaining folders collapse into a stack indicator at the dial edge
+- Expanded (full circle): widget animates away from corner to a free position on screen, shows all folders in a full 360° dial
+- Dial scrolling: clicking prev/next cycles through folders in sets of 3, with a rotary-dial easing animation (ease-in-out, spring feel)
+- After folder selection or dismiss: widget returns to top-right corner with spring easing (`spring(response: 0.4, dampingFraction: 0.7)`)
+
+### Screenshot/Recording Flow
+1. User clicks widget → dial fans out
+2. User clicks a folder → folder is set as active destination
+3. App triggers macOS native screenshot tool: `NSWorkspace.shared.open(URL(string: "screencaptureui://")!)` or via `Process` running `/usr/sbin/screencapture`
+4. App watches the selected folder (or Desktop/Downloads fallback) using `DispatchSource` file-system events or `NSMetadataQuery` to detect the new file
+5. New file is moved to the selected folder automatically
+6. Widget returns to resting state with animation
+
+### Theming System
+- Define a `WidgetTheme` struct from day one with properties for: background material, accent color, icon style, corner radius, shadow style
+- Default theme: `.ultraThinMaterial` (frosted glass), system accent, SF Symbols icons
+- Store the active theme in `UserDefaults` as encoded JSON
+- All views must consume theme values via `@EnvironmentObject` — no hardcoded colors or materials anywhere in view files
+- This ensures the theming system can be extended or redesigned without touching individual views
+
+### Animations
+- All state transitions must use SwiftUI `withAnimation` — no abrupt changes
+- Corner → center: `spring(response: 0.5, dampingFraction: 0.75)`
+- Center → corner return: `spring(response: 0.4, dampingFraction: 0.7)`
+- Dial fan-out: staggered with `.animation(.spring(), value: isHovering)` per folder icon
+- Rotary dial scroll: mimic the deceleration feel of a phone dial with custom `TimingCurve`
+
+---
+
+## File & Folder Structure
+```
+PortfolioWidget/
+├── App/
+│   ├── PortfolioWidgetApp.swift       # @main, AppDelegate bridge
+│   └── AppDelegate.swift              # NSPanel setup, menu bar item
+├── Models/
+│   ├── Folder.swift                   # Codable folder model
+│   ├── SavedItem.swift                # Screenshot/video metadata
+│   └── WidgetTheme.swift              # Theme struct
+├── ViewModels/
+│   ├── WidgetViewModel.swift          # Widget state, folder logic
+│   └── FolderViewModel.swift          # Folder CRUD, starring, recency
+├── Views/
+│   ├── Widget/
+│   │   ├── WidgetContainerView.swift  # Root view, state router
+│   │   ├── RestingCircleView.swift    # Default dot
+│   │   ├── DialView.swift             # Quarter/full circle dial
+│   │   ├── FolderIconView.swift       # Individual folder in dial
+│   │   └── DialScrollControlView.swift
+│   └── App/
+│       ├── MainAppView.swift          # Expanded app interface
+│       ├── FolderGridView.swift
+│       └── SettingsView.swift
+├── Services/
+│   ├── CaptureService.swift           # Launches native screenshot tool, watches for output
+│   ├── FileWatcherService.swift       # DispatchSource FS events
+│   └── PersistenceService.swift       # UserDefaults read/write
+└── Resources/
+    └── Assets.xcassets
+```
+
+---
+
+## Code Style Rules
+- **No massive view files** — if a SwiftUI view exceeds ~150 lines, extract subviews
+- **No business logic in views** — views only read from ViewModels and call ViewModel methods
+- **Use SF Symbols** for all icons unless a custom icon is explicitly designed
+- **Prefer `let` over `var`** everywhere possible
+- **All async work** (file watching, folder scanning) must happen off the main thread; publish results back via `@MainActor`
+- **No force unwraps (`!`)** — use `guard let` or `if let` with graceful fallbacks
+- **Comment intent, not implementation** — explain *why*, not *what*
+
+---
+
+## AI Coding Assistant Guidelines (for Cursor)
+- When generating SwiftUI views, always inject theme via `@EnvironmentObject` — never hardcode `.ultraThinMaterial` or colors directly
+- When generating animations, use spring animations with explicit `response` and `dampingFraction` values
+- When touching the window/panel layer, always use AppKit (`NSPanel`, `NSWindow`) — do not attempt to configure floating windows purely in SwiftUI
+- When generating file system code, always handle errors explicitly — no silent failures
+- Always ask before adding a third-party Swift package — prefer stdlib and Apple frameworks
+- Preserve the 4-state `WidgetState` enum as the single source of truth for UI transitions
