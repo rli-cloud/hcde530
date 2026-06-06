@@ -1,0 +1,11 @@
+/* Brain Bank extension stylesheet.
+   Imports the project's design tokens + Tailwind utilities so the widget
+   looks the same inside the extension as on the install page.
+   Built by @tailwindcss/cli; output is loaded into the Shadow DOM.
+
+   Geist is imported here (not via <link>) because the Shadow DOM can't
+   reach the host page's <head>. */
+
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap");
+@import "../../src/styles.css";
+@import "./shadow-base.css";

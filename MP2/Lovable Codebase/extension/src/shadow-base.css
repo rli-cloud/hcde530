@@ -1,0 +1,83 @@
+/* Shadow-DOM-scoped base layer for the Brain Bank extension widget.
+ *
+ * The widget mounts inside a Shadow DOM, where `:root` selectors in
+ * src/styles.css do NOT match (a shadow stylesheet can only style its own
+ * tree, and `:root` targets the document's <html>). Without this file the
+ * design tokens never reach the widget — buttons appear transparent, fonts
+ * fall back to the host page's serif, and rem-based utilities scale
+ * differently per site because rem inherits the host page's <html>
+ * font-size.
+ *
+ * Mirroring the tokens onto :host fixes all of that.
+ */
+
+:host {
+  /* Anchor rem + lock the typographic baseline so host-page CSS can't leak in. */
+  font-size: 16px;
+  font-family: "Geist", system-ui, -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Mirror of :root tokens from src/styles.css (light mode). */
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.129 0.042 264.695);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.129 0.042 264.695);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.129 0.042 264.695);
+  --primary: oklch(0.208 0.042 265.755);
+  --primary-foreground: oklch(0.984 0.003 247.858);
+  --secondary: oklch(0.968 0.007 247.896);
+  --secondary-foreground: oklch(0.208 0.042 265.755);
+  --muted: oklch(0.968 0.007 247.896);
+  --muted-foreground: oklch(0.554 0.046 257.417);
+  --accent: oklch(0.968 0.007 247.896);
+  --accent-foreground: oklch(0.208 0.042 265.755);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.929 0.013 255.508);
+  --input: oklch(0.929 0.013 255.508);
+  --ring: oklch(0.704 0.04 256.788);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.984 0.003 247.858);
+  --sidebar-foreground: oklch(0.129 0.042 264.695);
+  --sidebar-primary: oklch(0.208 0.042 265.755);
+  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-accent: oklch(0.968 0.007 247.896);
+  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
+  --sidebar-border: oklch(0.929 0.013 255.508);
+  --sidebar-ring: oklch(0.704 0.04 256.788);
+}
+
+/* Box-sizing reset + font inheritance for every descendant in the shadow tree,
+ * so host-page styles can't leak in via inheritance. */
+:host,
+:host *,
+:host *::before,
+:host *::after {
+  box-sizing: border-box;
+}
+
+:host * {
+  font-family: inherit;
+}
+
+/* Tailwind v4 makes a bare `border` resolve to currentColor, and the
+ * `@layer base { * { border-color: var(--color-border) } }` rule from
+ * src/styles.css does not reliably win inside the Shadow DOM. Without
+ * this, `border-border` / `border-input` cards and inputs render with
+ * invisible borders. Restore the v4 baseline scoped to the shadow tree. */
+:host *,
+:host *::before,
+:host *::after {
+  border-color: var(--color-border, var(--border));
+  border-style: solid;
+  border-width: 0;
+}
