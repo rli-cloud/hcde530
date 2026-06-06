@@ -1,0 +1,1 @@
+self.addEventListener("install",()=>{self.skipWaiting?.()});self.addEventListener("activate",()=>{self.clients?.claim?.()});chrome.action?.onClicked?.addListener?.(async(c)=>{if(!c.id)return;await chrome.tabs.sendMessage(c.id,{type:"BRAIN_BANK_OPEN_DASHBOARD"}).catch(()=>{return})});
