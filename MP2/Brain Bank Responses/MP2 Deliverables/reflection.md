@@ -7,7 +7,7 @@ Brain Bank is a bookmark and inspiration-capture tool for designers who collect 
 
 Everything stays local—`chrome.storage.local` in the extension, `localStorage` in the preview—with no backend, sign-up, or telemetry. The content script renders inside a Shadow DOM so host-page styles cannot break the UI.
 
-A more detailed description of this widget can be found in `README.md`. 
+A more detailed description of this widget can be found in `README.md`. The full engineering specification is in `widget-specification.md`.
 
 --- 
 
